@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "fullstack-transition-lab",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "keep_vars": true,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+  /*
+   * Optional production database binding.
+   * After creating Hyperdrive in Cloudflare, uncomment and replace the id:
+   *
+   * "hyperdrive": [
+   *   {
+   *     "binding": "HYPERDRIVE",
+   *     "id": "YOUR_HYPERDRIVE_ID",
+   *     "localConnectionString": "postgresql://fullstack:fullstack123@localhost:5432/fullstack_lab"
+   *   }
+   * ]
+   */
+}

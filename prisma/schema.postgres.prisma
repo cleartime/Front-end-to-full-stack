@@ -1,0 +1,85 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+  engineType      = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String
+  passwordHash String
+  role         String        @default("FULLSTACK_LEARNER")
+  level        String        @default("Frontend Senior")
+  weeklyHours  Int           @default(8)
+  tasks        ProjectTask[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model LearningModule {
+  id             String   @id @default(cuid())
+  title          String
+  category       String
+  summary        String
+  status         String   @default("READY")
+  progress       Int      @default(0)
+  sequence       Int
+  interviewFocus String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([category, status])
+  @@index([sequence])
+}
+
+model ProjectTask {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  type        String
+  status      String   @default("TODO")
+  priority    String   @default("MEDIUM")
+  branch      String
+  storyPoints Int      @default(2)
+  dueDate     DateTime?
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ownerId, updatedAt])
+  @@index([status, priority])
+  @@index([type])
+}
+
+model InterviewQuestion {
+  id         String   @id @default(cuid())
+  category   String
+  title      String
+  difficulty String
+  status     String   @default("NEW")
+  answerHint String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([category, difficulty])
+  @@index([status])
+}
+
+model BackendLog {
+  id         String   @id @default(cuid())
+  level      String
+  service    String
+  message    String
+  durationMs Int
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([service, level])
+}

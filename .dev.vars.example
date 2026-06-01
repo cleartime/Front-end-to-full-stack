@@ -1,0 +1,2 @@
+DATABASE_URL="postgresql://fullstack:fullstack123@localhost:5432/fullstack_lab"
+AUTH_SECRET="replace-with-a-long-random-production-secret"
