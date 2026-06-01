@@ -9,6 +9,13 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fullstack-transition-lab-db",
+      "database_id": "92326269-bb63-44db-b2a6-c742e3dcd687"
+    }
+  ],
   "observability": {
     "enabled": true
   }

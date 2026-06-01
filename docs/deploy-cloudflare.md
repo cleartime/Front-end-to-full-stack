@@ -11,19 +11,18 @@ Browser
   -> Cloudflare Worker
   -> OpenNext-rendered Next.js app
   -> Route Handlers (/api/*)
-  -> Prisma Client with PostgreSQL adapter
-  -> DATABASE_URL secret or Hyperdrive binding
-  -> PostgreSQL
+  -> Prisma Client with D1 adapter
+  -> Cloudflare D1 binding DB
+  -> fullstack-transition-lab-db
 ```
 
-## Why PostgreSQL instead of local SQLite
+## Database choice
 
 Local development defaults to SQLite because it is simple and requires no external service.
 
-Production on Cloudflare Workers cannot use `prisma/dev.db` as a persistent database file. Use one of these:
+Production on Cloudflare Workers cannot use `prisma/dev.db` as a persistent database file. This deployment uses Cloudflare D1 so the whole demo can run inside one Cloudflare account.
 
-- Recommended: external PostgreSQL, optionally behind Cloudflare Hyperdrive.
-- Alternative: Cloudflare D1, but Prisma + D1 currently does not preserve transaction guarantees, so it does not match the transaction lesson in this project.
+Important: Prisma's D1 adapter does not preserve full ACID transaction guarantees. The app still teaches transaction concepts, but for a larger production system that must rely on transactions, use PostgreSQL behind Hyperdrive.
 
 ## One-time Cloudflare setup
 
@@ -33,33 +32,25 @@ Production on Cloudflare Workers cannot use `prisma/dev.db` as a persistent data
    npx wrangler login
    ```
 
-2. Create or choose a production PostgreSQL database.
-
-3. Put runtime secrets into Cloudflare:
+2. Create a D1 database:
 
    ```bash
-   npm run cf:secret:database
-   npm run cf:secret:auth
+   npx wrangler d1 create fullstack-transition-lab-db
    ```
 
-4. If using Hyperdrive, create a Hyperdrive config in Cloudflare, then uncomment the `hyperdrive` block in `wrangler.jsonc` and replace `YOUR_HYPERDRIVE_ID`.
+3. Add the returned `database_id` to `wrangler.jsonc` under `d1_databases`.
 
-## Database setup
+4. Seed D1:
 
-Copy the local Cloudflare variable template:
+   ```bash
+   npm run cf:d1:seed
+   ```
 
-```bash
-cp .dev.vars.example .dev.vars
-```
+5. Put runtime secrets into Cloudflare:
 
-Edit `.dev.vars` and set `DATABASE_URL` to your PostgreSQL connection string.
-
-Create tables and seed demo data:
-
-```bash
-npm run cf:db:push
-npm run cf:db:seed
-```
+   ```bash
+   npm run cf:secret:auth
+   ```
 
 ## Preview locally in the Cloudflare runtime
 
@@ -94,4 +85,4 @@ After the repository exists on GitHub, Cloudflare Workers Builds can connect to 
 
 - Build command: `npm run cf:build`
 - Deploy command for local/manual deploy: `npm run cf:deploy`
-- Runtime secrets: `DATABASE_URL`, `AUTH_SECRET`
+- Runtime secret: `AUTH_SECRET`

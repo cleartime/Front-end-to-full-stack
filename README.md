@@ -5,7 +5,7 @@
 ## 技术栈
 
 - Next.js + React + TypeScript：统一前端页面和后端 Route Handlers。
-- Prisma + SQLite：本地零依赖数据库，方便学习建模、索引、事务。
+- Prisma + SQLite / D1：本地用 SQLite 快速学习，Cloudflare 部署用 D1 持久化演示数据。
 - httpOnly Cookie + JWT：练习登录态、服务端鉴权和 RBAC 扩展。
 - Zod：接口入参校验和错误响应。
 - Vitest：覆盖工具函数和限流逻辑。
@@ -79,12 +79,11 @@ fullstack123
 
 这个项目是 SSR/全栈 Next.js，Cloudflare 推荐用 Workers + OpenNext adapter。项目已经包含 `wrangler.jsonc`、`open-next.config.ts` 和 `cf:*` 脚本。
 
-正式部署不要使用本地 SQLite 文件，推荐 PostgreSQL，可选接 Cloudflare Hyperdrive。完整流程看 [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md)。
+正式部署不要使用本地 SQLite 文件。当前 Cloudflare 部署使用 D1；如果业务强依赖事务一致性，再切 PostgreSQL + Hyperdrive。完整流程看 [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md)。
 
 ```bash
-cp .dev.vars.example .dev.vars
-npm run cf:db:push
-npm run cf:db:seed
+npm run cf:d1:seed
+npm run cf:secret:auth
 npm run cf:preview
 npm run cf:deploy
 ```
