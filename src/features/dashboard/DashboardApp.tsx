@@ -5,7 +5,11 @@ import {
   ArrowRight,
   Bot,
   Boxes,
+  BookOpenCheck,
+  CalendarDays,
+  ChevronRight,
   CheckCircle2,
+  CircleDot,
   ClipboardList,
   Code2,
   Cloud,
@@ -19,6 +23,7 @@ import {
   LayoutDashboard,
   ListChecks,
   Loader2,
+  Lock,
   LockKeyhole,
   LogOut,
   Network,
@@ -32,7 +37,9 @@ import {
   ShieldCheck,
   Sparkles,
   TableProperties,
-  TerminalSquare
+  TerminalSquare,
+  Trophy,
+  Zap
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { priorityLabel, statusLabel, TASK_STATUSES, TASK_TYPES, typeLabel } from "@/lib/status";
@@ -115,6 +122,8 @@ type TaskResponse = {
     totalPages: number;
   };
 };
+
+type LessonStageKey = "mainline" | "path" | "project" | "api" | "interview" | "review";
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -348,10 +357,87 @@ export function DashboardApp() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [activeStage, setActiveStage] = useState<LessonStageKey>("mainline");
 
   const completedModules = useMemo(() => modules.filter((item) => item.status === "DONE").length, [modules]);
   const activeTasks = useMemo(() => tasks.items.filter((item) => item.status !== "DONE").length, [tasks.items]);
   const hardQuestions = useMemo(() => questions.filter((item) => item.difficulty === "HARD").length, [questions]);
+  const overallProgress = useMemo(() => {
+    if (modules.length === 0) {
+      return 0;
+    }
+
+    return Math.round(modules.reduce((total, module) => total + module.progress, 0) / modules.length);
+  }, [modules]);
+  const nextModule = useMemo(() => modules.find((module) => module.status !== "DONE") ?? modules[0] ?? null, [modules]);
+  const reviewQuestions = useMemo(() => questions.filter((item) => item.status === "REVIEWED").length, [questions]);
+  const lessonStages = useMemo(
+    () =>
+      [
+        {
+          key: "mainline" as const,
+          nav: "今日学习",
+          title: "第 1 关：今天只学一个重点",
+          goal: "先知道今天要学什么，为什么学，完成后会得到什么反馈。",
+          icon: <LayoutDashboard size={17} />,
+          xp: 60
+        },
+        {
+          key: "path" as const,
+          nav: "学习路径",
+          title: "第 2 关：看清全栈路线",
+          goal: "只看当前所在位置、上一关和下一关，不一次性背完整路线。",
+          icon: <GitBranch size={17} />,
+          xp: 40
+        },
+        {
+          key: "project" as const,
+          nav: "实战项目",
+          title: "第 3 关：动手改一个真实任务",
+          goal: "通过任务状态变化，理解 CRUD、事务和后端日志。",
+          icon: <ClipboardList size={17} />,
+          xp: 50
+        },
+        {
+          key: "api" as const,
+          nav: "代码实验",
+          title: "第 4 关：运行一个 API",
+          goal: "像前端调接口一样观察请求、响应、错误码和日志。",
+          icon: <TerminalSquare size={17} />,
+          xp: 45
+        },
+        {
+          key: "interview" as const,
+          nav: "题库挑战",
+          title: "第 5 关：把知识讲成面试答案",
+          goal: "只练几道题，重点是说清项目里的对应实现。",
+          icon: <ListChecks size={17} />,
+          xp: 55
+        },
+        {
+          key: "review" as const,
+          nav: "复盘资料",
+          title: "第 6 关：架构和数据库复盘",
+          goal: "按小卡片复盘整体架构、后端、数据库、索引、事务和部署。",
+          icon: <Server size={17} />,
+          xp: 70
+        }
+      ],
+    []
+  );
+  const activeStageIndex = lessonStages.findIndex((stage) => stage.key === activeStage);
+  const normalizedStageIndex = activeStageIndex >= 0 ? activeStageIndex : 0;
+  const currentStage = lessonStages[normalizedStageIndex];
+  const stageProgress = Math.round(((normalizedStageIndex + 1) / lessonStages.length) * 100);
+
+  function selectStage(stage: LessonStageKey) {
+    setActiveStage(stage);
+  }
+
+  function goToRelativeStage(offset: number) {
+    const nextIndex = Math.min(lessonStages.length - 1, Math.max(0, normalizedStageIndex + offset));
+    setActiveStage(lessonStages[nextIndex].key);
+  }
 
   async function loadTasks(nextKeyword = keyword, nextStatus = statusFilter) {
     const params = new URLSearchParams({
@@ -496,43 +582,30 @@ export function DashboardApp() {
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell lesson-app-shell">
       <aside className="side-nav" aria-label="主导航">
         <div className="brand-block">
           <div className="brand-mark">
             <Boxes size={20} />
           </div>
           <div>
-            <strong>FullStack Lab</strong>
-            <span>Transition OS</span>
+            <strong>全栈修炼场</strong>
+            <span>闯关学习平台</span>
           </div>
         </div>
 
         <nav className="nav-list">
-          <a className="nav-item active" href="#roadmap">
-            <LayoutDashboard size={17} />
-            <span>训练总览</span>
-          </a>
-          <a className="nav-item" href="#tasks">
-            <ClipboardList size={17} />
-            <span>项目任务</span>
-          </a>
-          <a className="nav-item" href="#api">
-            <TerminalSquare size={17} />
-            <span>API 练习</span>
-          </a>
-          <a className="nav-item" href="#architecture">
-            <Server size={17} />
-            <span>架构流程</span>
-          </a>
-          <a className="nav-item" href="#interview">
-            <ListChecks size={17} />
-            <span>面试题库</span>
-          </a>
-          <a className="nav-item" href="#ai">
-            <Bot size={17} />
-            <span>AI Mentor</span>
-          </a>
+          {lessonStages.map((stage, index) => (
+            <button
+              className={stage.key === activeStage ? "nav-item active" : "nav-item"}
+              key={stage.key}
+              type="button"
+              onClick={() => selectStage(stage.key)}
+            >
+              {stage.icon}
+              <span>{index + 1}. {stage.nav}</span>
+            </button>
+          ))}
         </nav>
 
         <div className="nav-footer">
@@ -541,11 +614,12 @@ export function DashboardApp() {
         </div>
       </aside>
 
-      <section className="workspace">
-        <header className="topbar">
+      <section className="workspace lesson-workspace">
+        <header className="topbar lesson-topbar">
           <div>
-            <p className="page-kicker">前端转全栈训练台</p>
-            <h1>把后端能力落到一个可讲、可跑、可改的项目里</h1>
+            <p className="page-kicker">前端转全栈学习平台</p>
+            <h1>{currentStage.title}</h1>
+            <p className="lesson-goal">{currentStage.goal}</p>
           </div>
           <div className="topbar-actions">
             <label className="search-box">
@@ -573,43 +647,106 @@ export function DashboardApp() {
 
         {error ? <div className="error-banner">{error}</div> : null}
 
-        <section className="metrics-grid" aria-label="关键指标">
-          <Metric label="学习模块" value={`${completedModules}/${modules.length}`} helper="已完成 / 总模块" icon={<CheckCircle2 size={18} />} tone="green" />
-          <Metric label="活跃任务" value={String(activeTasks)} helper={`总任务 ${tasks.meta.total}`} icon={<GitBranch size={18} />} tone="blue" />
-          <Metric label="高阶面试题" value={String(hardQuestions)} helper="需要复盘输出" icon={<ShieldCheck size={18} />} tone="amber" />
-          <Metric label="每周投入" value={`${user.weeklyHours}h`} helper={user.level} icon={<Activity size={18} />} tone="teal" />
-        </section>
+        <section className="lesson-player" aria-label="逐关学习播放器">
+          <LessonStepper stages={lessonStages} activeStage={activeStage} progress={stageProgress} onSelectStage={selectStage} />
 
-        <ArchitectureLearningPanel architecture={architecture} />
+          <section className="lesson-stage-card">
+            <div className="lesson-stage-body">
+              {activeStage === "mainline" ? (
+                <div className="stage-two-column">
+                  <LearningHero
+                    user={user}
+                    nextModule={nextModule}
+                    overallProgress={overallProgress}
+                    activeTasks={activeTasks}
+                    hardQuestions={hardQuestions}
+                    onContinue={() => selectStage("path")}
+                    onPractice={() => selectStage("project")}
+                  />
+                  <ProgressSidebar
+                    user={user}
+                    completedModules={completedModules}
+                    moduleCount={modules.length}
+                    reviewQuestions={reviewQuestions}
+                    questionCount={questions.length}
+                    overallProgress={overallProgress}
+                  />
+                </div>
+              ) : null}
 
-        <section className="main-grid">
-          <div className="primary-column">
-            <LearningRoadmap modules={modules} />
-            <TaskBoard
-              tasks={tasks}
-              keyword={keyword}
-              statusFilter={statusFilter}
-              onKeywordChange={setKeyword}
-              onStatusChange={(value) => {
-                setStatusFilter(value);
-                loadTasks(keyword, value);
-              }}
-              onSearch={() => loadTasks(keyword, statusFilter)}
-              onTaskStatusChange={changeTaskStatus}
-              onCreateTask={createQuickTask}
+              {activeStage === "path" ? (
+                <div className="stage-focus-layout">
+                  <StageCoach
+                    icon={<GitBranch size={28} />}
+                    title="先看自己在地图哪里"
+                    points={["绿色是已经完成", "蓝色是当前关", "锁住的是后面再学"]}
+                    reward="+40 XP"
+                  />
+                  <LearningRoadmap modules={modules} nextModuleId={nextModule?.id} />
+                </div>
+              ) : null}
+
+              {activeStage === "project" ? (
+                <div className="stage-focus-layout">
+                  <StageCoach
+                    icon={<ClipboardList size={28} />}
+                    title="动手只做一个动作"
+                    points={["改一个任务状态", "看后端日志变化", "理解事务为什么存在"]}
+                    reward="+50 XP"
+                  />
+                  <TaskBoard
+                    tasks={tasks}
+                    keyword={keyword}
+                    statusFilter={statusFilter}
+                    onKeywordChange={setKeyword}
+                    onStatusChange={(value) => {
+                      setStatusFilter(value);
+                      loadTasks(keyword, value);
+                    }}
+                    onSearch={() => loadTasks(keyword, statusFilter)}
+                    onTaskStatusChange={changeTaskStatus}
+                    onCreateTask={createQuickTask}
+                  />
+                </div>
+              ) : null}
+
+              {activeStage === "api" ? (
+                <div className="stage-focus-layout two-panels">
+                  <StageCoach
+                    icon={<TerminalSquare size={28} />}
+                    title="先跑接口，再看结果"
+                    points={["点一个 GET 接口", "看统一响应结构", "再看日志怎么记录"]}
+                    reward="+45 XP"
+                  />
+                  <ApiPractice />
+                  <ActivityLog logs={logs} onRefresh={refreshLogs} />
+                </div>
+              ) : null}
+
+              {activeStage === "interview" ? (
+                <div className="stage-focus-layout two-panels">
+                  <StageCoach
+                    icon={<ListChecks size={28} />}
+                    title="一次只练几道题"
+                    points={["先读题", "再找项目对应代码", "最后讲成 30 秒答案"]}
+                    reward="+55 XP"
+                  />
+                  <InterviewChecklist questions={questions} />
+                  <AiMentor />
+                </div>
+              ) : null}
+
+              {activeStage === "review" ? <ResourceReviewPanel architecture={architecture} /> : null}
+            </div>
+
+            <LessonPager
+              currentIndex={normalizedStageIndex}
+              total={lessonStages.length}
+              reward={currentStage.xp}
+              onPrevious={() => goToRelativeStage(-1)}
+              onNext={() => goToRelativeStage(1)}
             />
-          </div>
-
-          <div className="secondary-column">
-            <ApiPractice />
-            <InterviewChecklist questions={questions} />
-          </div>
-
-          <div className="tertiary-column">
-            <AiMentor />
-            <ArchitecturePanel architecture={architecture} />
-            <ActivityLog logs={logs} onRefresh={refreshLogs} />
-          </div>
+          </section>
         </section>
       </section>
     </main>
@@ -843,6 +980,96 @@ function ArchitectureLearningPanel({ architecture }: { architecture: Architectur
   );
 }
 
+function ResourceReviewPanel({ architecture }: { architecture: Architecture | null }) {
+  const [trackIndex, setTrackIndex] = useState(0);
+  const [storyIndex, setStoryIndex] = useState(0);
+  const activeTrack = architectureTracks[trackIndex] ?? architectureTracks[0];
+  const activeStory = backendStorySlides[storyIndex] ?? backendStorySlides[0];
+
+  return (
+    <section className="resource-review" aria-label="架构与数据库复盘">
+      <div className="resource-track-nav" aria-label="复盘主题">
+        {architectureTracks.map((track, index) => (
+          <button className={index === trackIndex ? "active" : ""} key={track.title} type="button" onClick={() => setTrackIndex(index)}>
+            {track.icon}
+            <span>{track.title}</span>
+          </button>
+        ))}
+      </div>
+
+      <article className="resource-focus-card">
+        <div className="resource-focus-heading">
+          <div className="track-icon">{activeTrack.icon}</div>
+          <div>
+            <strong>{activeTrack.title}</strong>
+            <p>{activeTrack.summary}</p>
+          </div>
+        </div>
+        <MiniFlow items={activeTrack.flow} />
+        <div className="track-answer">
+          <span>面试直白说法</span>
+          <p>{activeTrack.answer}</p>
+        </div>
+        <div className="track-questions">
+          {activeTrack.questions.map((question) => (
+            <span key={question}>{question}</span>
+          ))}
+        </div>
+      </article>
+
+      <article className="story-practice-card">
+        <div className="story-practice-header">
+          <div>
+            <span>{activeStory.step} / {backendStorySlides.length.toString().padStart(2, "0")}</span>
+            <strong>{activeStory.title}</strong>
+          </div>
+          <div className="story-practice-actions">
+            <button className="icon-button" type="button" onClick={() => setStoryIndex((value) => Math.max(0, value - 1))} disabled={storyIndex === 0}>
+              <ArrowRight className="rotate-180" size={15} />
+            </button>
+            <button
+              className="icon-button"
+              type="button"
+              onClick={() => setStoryIndex((value) => Math.min(backendStorySlides.length - 1, value + 1))}
+              disabled={storyIndex === backendStorySlides.length - 1}
+            >
+              <ArrowRight size={15} />
+            </button>
+          </div>
+        </div>
+        <p>{activeStory.plain}</p>
+        <MiniFlow items={activeStory.flow} />
+        <dl className="resource-notes">
+          <div>
+            <dt>前端类比</dt>
+            <dd>{activeStory.analogy}</dd>
+          </div>
+          <div>
+            <dt>项目位置</dt>
+            <dd>{activeStory.project}</dd>
+          </div>
+          <div>
+            <dt>面试说法</dt>
+            <dd>{activeStory.interview}</dd>
+          </div>
+        </dl>
+      </article>
+
+      <article className="resource-side-card">
+        <strong>这一关怎么学</strong>
+        <p>不要一次背完所有架构。先点左边一个主题，看“直白说法”，再用右侧 PPT 流程练 30 秒表达。</p>
+        {architecture ? (
+          <div className="resource-angle-list">
+            {architecture.interviewAngles.slice(0, 5).map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
+        ) : null}
+      </article>
+    </section>
+  );
+}
+
 function MiniFlow({ items }: { items: string[] }) {
   return (
     <div className="mini-flow">
@@ -935,14 +1162,375 @@ function Metric({
   );
 }
 
-function LearningRoadmap({ modules }: { modules: LearningModule[] }) {
+function LessonStepper({
+  stages,
+  activeStage,
+  progress,
+  onSelectStage
+}: {
+  stages: Array<{ key: LessonStageKey; nav: string; icon: React.ReactNode }>;
+  activeStage: LessonStageKey;
+  progress: number;
+  onSelectStage: (stage: LessonStageKey) => void;
+}) {
   return (
-    <section className="panel" id="roadmap">
-      <PanelHeader icon={<Code2 size={18} />} title="全栈能力路线" action="按面试优先级排序" />
-      <div className="roadmap-list">
+    <div className="lesson-stepper" aria-label="学习关卡进度">
+      <div className="lesson-stepper-top">
+        <strong>今日学习路线</strong>
+        <span>{progress}%</span>
+      </div>
+      <div className="lesson-stepper-track">
+        <i style={{ width: `${progress}%` }} />
+      </div>
+      <div className="lesson-step-list">
+        {stages.map((stage, index) => (
+          <button
+            className={stage.key === activeStage ? "lesson-step active" : "lesson-step"}
+            key={stage.key}
+            type="button"
+            onClick={() => onSelectStage(stage.key)}
+          >
+            <span>{index + 1}</span>
+            <small>{stage.nav}</small>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StageCoach({ icon, title, points, reward }: { icon: React.ReactNode; title: string; points: string[]; reward: string }) {
+  return (
+    <aside className="stage-coach" aria-label="本关学习引导">
+      <div className="stage-coach-icon">{icon}</div>
+      <div>
+        <strong>{title}</strong>
+        <p>这关只做下面三件事，做完再进入下一关。</p>
+      </div>
+      <ol>
+        {points.map((point) => (
+          <li key={point}>{point}</li>
+        ))}
+      </ol>
+      <span className="stage-reward">
+        <Zap size={15} />
+        完成本关 {reward}
+      </span>
+    </aside>
+  );
+}
+
+function LessonPager({
+  currentIndex,
+  total,
+  reward,
+  onPrevious,
+  onNext
+}: {
+  currentIndex: number;
+  total: number;
+  reward: number;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <footer className="lesson-pager">
+      <button className="secondary-button" type="button" onClick={onPrevious} disabled={currentIndex === 0}>
+        上一关
+      </button>
+      <div className="lesson-pager-status">
+        <span>第 {currentIndex + 1} / {total} 关</span>
+        <strong>完成奖励 +{reward} XP</strong>
+      </div>
+      <button className="primary-button" type="button" onClick={onNext} disabled={currentIndex === total - 1}>
+        下一关
+        <ChevronRight size={16} />
+      </button>
+    </footer>
+  );
+}
+
+function LearningHero({
+  user,
+  nextModule,
+  overallProgress,
+  activeTasks,
+  hardQuestions,
+  onContinue,
+  onPractice
+}: {
+  user: User;
+  nextModule: LearningModule | null;
+  overallProgress: number;
+  activeTasks: number;
+  hardQuestions: number;
+  onContinue?: () => void;
+  onPractice?: () => void;
+}) {
+  const todayXp = Math.min(300, 160 + activeTasks * 12 + hardQuestions * 8);
+  const xp = 4200 + overallProgress * 42;
+  const xpTarget = 7200;
+  const xpPercent = Math.min(100, Math.round((xp / xpTarget) * 100));
+  const level = Math.max(12, Math.round(overallProgress / 5) + 8);
+  const lessonTitle = nextModule?.title ?? "API 合约设计与文档规范";
+  const lessonSummary = nextModule?.summary ?? "从接口合同、错误码、数据校验和数据库读写开始，把全栈链路讲清楚。";
+
+  return (
+    <section className="hero-quest" aria-labelledby="today-mainline">
+      <div className="quest-illustration" aria-hidden="true">
+        <div className="code-card">
+          <span>{"{ API }"}</span>
+          <i />
+          <i />
+          <i />
+        </div>
+        <div className="upload-bubble">
+          <ArrowRight size={20} />
+        </div>
+      </div>
+
+      <div className="quest-copy">
+        <div className="quest-meta">
+          <span>
+            <Zap size={16} />
+            今日主线
+          </span>
+          <small>第 23 天</small>
+        </div>
+        <h2 id="today-mainline">{lessonTitle}</h2>
+        <p>{lessonSummary}</p>
+        <div className="quest-tags">
+          <span>后端基础</span>
+          <span>API 设计</span>
+          <span>数据库</span>
+          <span>面试表达</span>
+        </div>
+        <div className="quest-actions">
+          <button className="primary-button quest-start" type="button" onClick={onContinue}>
+            继续学习
+            <ChevronRight size={17} />
+          </button>
+          <button className="ghost-action" type="button" onClick={onPractice}>
+            <Play size={16} />
+            继续上次：事务日志
+          </button>
+        </div>
+      </div>
+
+      <div className="level-orbit" aria-label={`当前等级 ${level}`}>
+        <div className="level-ring" style={{ "--level-progress": `${xpPercent}%` } as React.CSSProperties}>
+          <span>当前等级</span>
+          <strong>Lv. {level}</strong>
+        </div>
+        <div className="xp-line">
+          <strong>{xp} / {xpTarget} XP</strong>
+          <span>
+            <i style={{ width: `${xpPercent}%` }} />
+          </span>
+          <small>再获得 {xpTarget - xp} XP 升级</small>
+        </div>
+      </div>
+
+      <div className="quest-bottom">
+        <span>今日 XP</span>
+        <strong>+{todayXp} XP</strong>
+        <div className="progress-track">
+          <span style={{ width: `${Math.min(100, Math.round((todayXp / 300) * 100))}%` }} />
+        </div>
+        <span>每日上限：{todayXp} / 300 XP</span>
+        <strong className="streak-hot">
+          <Zap size={15} />
+          连续学习 12 天
+        </strong>
+      </div>
+
+      <div className="mentor-note">
+        <CalendarDays size={15} />
+        <span>{user.weeklyHours}h / 周目标，今天先完成一个后端关卡。</span>
+      </div>
+    </section>
+  );
+}
+
+function DailyMissionGrid({
+  activeTasks,
+  hardQuestions,
+  overallProgress
+}: {
+  activeTasks: number;
+  hardQuestions: number;
+  overallProgress: number;
+}) {
+  const missions = [
+    {
+      icon: <Code2 size={22} />,
+      title: "完成 1 个代码实验",
+      detail: "改一个任务状态，观察 API、事务和日志",
+      current: Math.max(0, 1 - Math.min(activeTasks, 1)),
+      total: 1,
+      xp: 40,
+      href: "#tasks",
+      tone: "green"
+    },
+    {
+      icon: <BookOpenCheck size={22} />,
+      title: "答对 10 道题",
+      detail: "把数据库、鉴权和部署讲成面试答案",
+      current: Math.max(3, 10 - hardQuestions),
+      total: 10,
+      xp: 40,
+      href: "#interview",
+      tone: "blue"
+    },
+    {
+      icon: <Bot size={22} />,
+      title: "问 AI Mentor 1 次",
+      detail: "让它帮你把今天关卡整理成表达稿",
+      current: overallProgress > 40 ? 1 : 0,
+      total: 1,
+      xp: 20,
+      href: "#ai",
+      tone: "amber"
+    }
+  ];
+
+  return (
+    <section className="daily-missions" aria-labelledby="daily-missions-title">
+      <div className="section-title-row">
+        <h2 id="daily-missions-title">今日任务</h2>
+        <span>完成任务拿 XP，推动路线解锁</span>
+      </div>
+      <div className="mission-grid">
+        {missions.map((mission) => (
+          <a className={`mission-card mission-${mission.tone}`} href={mission.href} key={mission.title}>
+            <div className="mission-icon">{mission.icon}</div>
+            <div>
+              <strong>{mission.title}</strong>
+              <p>{mission.detail}</p>
+              <div className="mission-progress">
+                <span>{mission.current} / {mission.total}</span>
+                <i>
+                  <b style={{ width: `${Math.min(100, Math.round((mission.current / mission.total) * 100))}%` }} />
+                </i>
+                <em>+{mission.xp} XP</em>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProgressSidebar({
+  user,
+  completedModules,
+  moduleCount,
+  reviewQuestions,
+  questionCount,
+  overallProgress
+}: {
+  user: User;
+  completedModules: number;
+  moduleCount: number;
+  reviewQuestions: number;
+  questionCount: number;
+  overallProgress: number;
+}) {
+  const readiness = Math.min(92, Math.max(35, Math.round((overallProgress + (reviewQuestions / Math.max(1, questionCount)) * 100) / 2)));
+  const achievements = [
+    { icon: <Code2 size={24} />, title: "初露锋芒", detail: `完成 ${completedModules} 个模块`, active: completedModules > 0 },
+    { icon: <FlameIcon />, title: "坚持不懈", detail: "连续学习 12 天", active: true },
+    { icon: <Trophy size={24} />, title: "全栈起步", detail: "完成 20% 路径", active: overallProgress >= 20 },
+    { icon: <Lock size={24} />, title: "更多成就", detail: "敬请期待", active: false }
+  ];
+
+  return (
+    <aside className="progress-rail" aria-label="学习进度侧栏">
+      <section className="learner-card">
+        <div className="avatar-chip">
+          <span>{user.name.slice(0, 1)}</span>
+        </div>
+        <div>
+          <strong>{user.name}</strong>
+          <small>{user.level}</small>
+          <div className="mini-xp">
+            <i style={{ width: `${overallProgress}%` }} />
+          </div>
+        </div>
+        <span className="level-badge">Lv. {Math.max(12, Math.round(overallProgress / 5) + 8)}</span>
+      </section>
+
+      <section className="weekly-goal-card">
+        <div className="card-title-line">
+          <strong>本周目标</strong>
+          <span>设置目标</span>
+        </div>
+        <div className="goal-line">
+          <span>学习 {user.weeklyHours} 小时</span>
+          <strong>{Math.round(user.weeklyHours * 0.62)} / {user.weeklyHours} 小时</strong>
+        </div>
+        <div className="wide-progress">
+          <i style={{ width: "62%" }} />
+        </div>
+        <div className="week-dots">
+          {["一", "二", "三", "四", "五", "六", "日"].map((day, index) => (
+            <span className={index < 5 ? "checked" : undefined} key={day}>
+              {day}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <section className="achievement-card">
+        <div className="card-title-line">
+          <strong>成就徽章</strong>
+          <span>查看全部</span>
+        </div>
+        <div className="achievement-grid">
+          {achievements.map((achievement) => (
+            <article className={achievement.active ? "achievement active" : "achievement"} key={achievement.title}>
+              <div>{achievement.icon}</div>
+              <strong>{achievement.title}</strong>
+              <small>{achievement.detail}</small>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="readiness-card">
+        <div className="readiness-gauge" style={{ "--ready": `${readiness}%` } as React.CSSProperties}>
+          <strong>{readiness}%</strong>
+          <span>面试准备度</span>
+        </div>
+        <div className="readiness-list">
+          <span><CheckCircle2 size={14} /> 架构表达 {overallProgress}%</span>
+          <span><CheckCircle2 size={14} /> 项目实战 {completedModules}/{moduleCount}</span>
+          <span><CircleDot size={14} /> 高阶题复盘 {reviewQuestions}/{questionCount}</span>
+        </div>
+        <a className="secondary-button full-width" href="#architecture">
+          开始专项提升
+          <ChevronRight size={16} />
+        </a>
+      </section>
+    </aside>
+  );
+}
+
+function FlameIcon() {
+  return <Zap size={24} />;
+}
+
+function LearningRoadmap({ modules, nextModuleId }: { modules: LearningModule[]; nextModuleId?: string }) {
+  return (
+    <section className="panel lesson-path-panel" id="lesson-path">
+      <PanelHeader icon={<Code2 size={18} />} title="学习路径" action="按解锁顺序闯关" />
+      <div className="roadmap-list quest-path">
         {modules.map((module) => (
-          <article className="roadmap-item" key={module.id}>
-            <div className="roadmap-sequence">{module.sequence}</div>
+          <article className={`roadmap-item quest-node ${module.id === nextModuleId ? "current" : ""}`} key={module.id}>
+            <div className="roadmap-sequence">
+              {module.status === "DONE" ? <CheckCircle2 size={18} /> : module.status === "LOCKED" ? <Lock size={16} /> : module.sequence}
+            </div>
             <div className="roadmap-content">
               <div className="row-between">
                 <strong>{module.title}</strong>
@@ -954,6 +1542,7 @@ function LearningRoadmap({ modules }: { modules: LearningModule[] }) {
               </div>
               <small>{module.interviewFocus}</small>
             </div>
+            <ChevronRight size={18} aria-hidden="true" />
           </article>
         ))}
       </div>
